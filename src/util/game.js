@@ -22,6 +22,8 @@ const Game = {
       this.height = 0
       // 屏幕物理分辨率与像素分辨率比例
       this.ratio = 0
+      // 图片
+      this.img = {}
       // 刷新率
       this.fps = {
         // fps显示dom
@@ -39,8 +41,6 @@ const Game = {
       this.element = []
       // 关卡
       this.level = 1
-      // 帧
-      this.frame = 0
       // 初始化
       this.init()
     }
@@ -72,6 +72,33 @@ const Game = {
       this.cas.height = this.cas.offsetHeight * this.ratio
       this.ctx.scale(this.ratio, this.ratio)
       this.ctx.translate(0.5, 0.5)
+    }
+
+    // 加载图片
+    loadImg () {
+      return new Promise(resolve => {
+        const getImg = url => {
+          return new Promise((resolve, reject) => {
+            const img = new Image()
+            img.src = url
+            img.onload = () => {
+              resolve(img)
+            }
+            img.error = error => {
+              reject(error)
+            }
+          })
+        }
+        (async () => {
+          for (const el in Game.img) {
+            const item = await getImg(Game.img[el])
+            this.img[el] = item
+            if (Object.keys(this.img).length === Object.keys(Game.img).length) {
+              resolve()
+            }
+          }
+        })()
+      })
     }
 
     // 创建fps
@@ -109,7 +136,6 @@ const Game = {
 
     // 运行
     run () {
-      this.frame++
       this.draw()
       window.requestAnimationFrame(() => {
         this.run()
@@ -137,34 +163,34 @@ const Game = {
     async init () {
       this.createCanvas()
       this.highDPI()
+      await this.loadImg()
       this.createFps()
       // 实例化背景
-      const bg = await new Game.Background(Game.img('bg'), this.width, this.height, 1, this.level)
+      const bg = await new Game.Background(this.img.bg5, this.width, this.height, 1, this.level)
       // 背景添加进元素
       this.element.push({ name: 'bg', el: bg })
-      // this.run()
+      // 实例化玩家
+      const palyer = new Game.Aircraft(this.img.plane2, this.width, this.height, 1, this.level)
+      this.element.push({ name: 'palyer', el: palyer })
+      this.run()
     }
   },
   // 图片路径
-  img (key) {
-    const img = {
-      bg: [
-        require('@/assets/img/bg5.jpg'),
-        require('@/assets/img/bg6.jpg')
-      ]
-    }
-    return img[key]
+
+  img: {
+    bg5: require('@/assets/img/bg5.jpg'),
+    plane2: require('@/assets/img/plane2.png')
   },
   /**
      * 背景类
-     * @param {String} imgUrl 图片路径
+     * @param {Object} img 图片
      * @param {Number} width 背景宽度
      * @param {Number} height 背景高度
      * @param {Number} speed 背景移动速度
      * @param {Number} level 关卡背景
      */
   Background: class Background {
-    constructor (imgUrl, width, height, speed, level) {
+    constructor (img, width, height, speed, level) {
       // 画布
       this.cas = document.createElement('canvas')
       // document.body.appendChild(this.cas)
@@ -173,29 +199,17 @@ const Game = {
       // 帧更新结束时间
       this.updateTime = new Date()
       this.level = level - 1
-      this.imgUrl = imgUrl
+      this.img = img
       this.width = this.cas.width = width
       this.height = this.cas.height = height
       this.speed = speed
-      this.img = null
       this.y = 0
       return this.create()
     }
 
     // 创建背景图片
     create () {
-      return new Promise((resolve, reject) => {
-        this.img = new Image()
-        this.img.src = this.imgUrl[this.level]
-        this.img.onload = () => {
-          this.ctx.drawImage(this.img, 0, 0, this.width, this.width / this.img.width * this.img.height)
-          resolve(this)
-        }
-        this.img.onerror = error => {
-          console.log(error)
-          reject(error)
-        }
-      })
+      this.ctx.drawImage(this.img, 0, 0, this.width, this.width / this.img.width * this.img.height)
     }
 
     // 移动
@@ -205,7 +219,7 @@ const Game = {
         this.ctx.clearRect(0, 0, this.width, this.height)
         this.updateTime = now
         this.ctx.save()
-        this.ctx.drawImage(this.img, 0, this.y - this.height, this.width, this.width / this.img.width * this.img.height)
+        this.ctx.drawImage(this.img, 0, this.y - this.height + 2, this.width, this.width / this.img.width * this.img.height)
         this.ctx.drawImage(this.img, 0, this.y, this.width, this.width / this.img.width * this.img.height)
         if (this.y >= this.height) {
           this.y = 0
@@ -216,34 +230,28 @@ const Game = {
   },
   /**
    * 飞机类
-   * @param {String} imgUrl 图片地址
+   * @param {Object} img 飞机图片
    * @param {Number} width 飞机宽度
    * @param {Number} height 飞机高度
    */
   Aircraft: class Aircraft {
-    constructor (imgUrl, width, height) {
+    constructor (img, width, height) {
       this.cas = document.createElement('canvas')
       this.ctx = this.cas.getContext('2d')
-      this.imgUrl = imgUrl
+      this.img = img
       this.width = this.cas.width = width
       this.height = this.cas.height = height
       this.x = 0
       this.y = 0
+      this.create()
+    }
+
+    // 创建
+    create () {
+      this.ctx.drawImage(this.img, 0, 0, this.width, this.width / this.img.width * this.img.height)
     }
   }
 }
-
-// /**
-//    * 游戏主类
-//    * @param {Object} dom dom对象
-//    */
-// class Striker {
-//   constructor (dom) {
-//     this.dom = dom
-//     this.cas = null
-//     this.ctx = null
-//   }
-// }
 // /**
 //    * 飞机类
 //    * @param {String} imgUrl 图片地址
