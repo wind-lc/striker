@@ -67,10 +67,8 @@ export default {
       this.rect = document.createElement('canvas')
       this.rect.width = 20
       this.rect.height = 20
-      const ctx = this.rect.getContext('2d')
-      const img = new Image()
-      img.src = require('@/assets/img/logo.png')
-      ctx.drawImage(img, 0, 0, 20, 20)
+      // const ctx = this.rect.getContext('2d')
+      // ctx.drawImage(img, 0, 0, 20, 20)
       this.loop()
     },
     // 运行
