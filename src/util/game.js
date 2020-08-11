@@ -388,6 +388,8 @@ class Player extends Aircraft {
     ctx.restore()
     // 加入图层列表
     this.list[1] = { cas, ctx, width, height, x, y }
+    // 第二个螺旋桨[51,2]
+    // 第三个螺旋桨[97,2]
   }
 
   // 移动
