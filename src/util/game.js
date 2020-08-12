@@ -199,7 +199,7 @@ class Striker {
     // 显示fps
     this.showFps(now)
     // 背景移动
-    this.element.bg.move(now)
+    this.element.bg.move()
     // 清除画布
     this.ctx.clearRect(0, 0, this.width, this.height)
     this.ctx.save()
@@ -210,6 +210,9 @@ class Striker {
       if (el.list && el.list.length > 0) {
         el.list.forEach(element => {
           this.ctx.drawImage(element.cas, element.x, element.y)
+          if (element.update) {
+            element.update(el, now)
+          }
         })
       }
     }
@@ -229,7 +232,6 @@ class Striker {
     // 实例化玩家
     const palyer = new Game.Player(this.img, 66, 50, this.width, this.height)
     this.element.palyer = palyer
-    console.log(palyer)
     this.eventListening(this)
     this.run()
   }
@@ -271,10 +273,9 @@ class Background {
   }
 
   // 移动
-  move (now) {
+  move () {
     this.offset += 1.5
     this.ctx.clearRect(0, 0, this.width, this.height)
-    this.updateTime = now
     this.ctx.save()
     this.ctx.drawImage(this.img, 0, this.offset - this.height + 2, this.width, this.width / this.img.width * this.img.height)
     this.ctx.drawImage(this.img, 0, this.offset, this.width, this.width / this.img.width * this.img.height)
@@ -335,6 +336,10 @@ class Player extends Aircraft {
     this.drag = false
     // 螺旋桨偏移
     this.windstickOffset = [this.width / 2, 0]
+    // 螺旋桨图片剪切位置
+    this.windstickCut = [[6, 2], [51, 2], [97, 2]]
+    // 螺旋桨剪切索引
+    this.windstickIndex = 0
     this.init()
   }
 
@@ -371,25 +376,41 @@ class Player extends Aircraft {
     ctx.drawImage(this.img.plane2, 264, 51, 66, 50, 0, 0, width, height)
     ctx.restore()
     // 加入图层列表
-    this.list[0] = { cas, ctx, width, height, x, y }
+    this.list[0] = { cas, ctx, width, height, x, y, update: this.windstickRotate }
   }
 
   // 创建螺旋桨
   createWindstick () {
     const cas = document.createElement('canvas')
     const ctx = cas.getContext('2d')
-    const width = 37
-    this.windstickOffset[0] = this.windstickOffset[0] - 37 / 2
-    const height = 6
+    const width = 22
+    this.windstickOffset[0] = this.windstickOffset[0] - width / 2
+    const height = 3.6
     const x = this.x + this.windstickOffset[0]
     const y = this.y + this.windstickOffset[1]
+    // 帧更新结束时间
+    const updateTime = new Date()
     ctx.save()
-    ctx.drawImage(this.img.lxj4, 6, 2, 37, 6, 0, 0, width, height)
+    ctx.drawImage(this.img.lxj4, this.windstickCut[0][0], this.windstickCut[0][1], 37, 6, 0, 0, width, height)
     ctx.restore()
     // 加入图层列表
-    this.list[1] = { cas, ctx, width, height, x, y }
-    // 第二个螺旋桨[51,2]
-    // 第三个螺旋桨[97,2]
+    this.list[1] = { cas, ctx, width, height, x, y, updateTime }
+  }
+
+  // 螺旋桨旋转
+  windstickRotate (player, now) {
+    const windstick = player.list[1]
+    if (now - windstick.updateTime > 20) {
+      windstick.updateTime = now
+      player.windstickIndex++
+      if (player.windstickIndex >= player.windstickCut.length) {
+        player.windstickIndex = 0
+      }
+      windstick.ctx.clearRect(0, 0, windstick.width, windstick.height)
+      windstick.ctx.save()
+      windstick.ctx.drawImage(player.img.lxj4, player.windstickCut[player.windstickIndex][0], player.windstickCut[player.windstickIndex][1], 37, 6, 0, 0, windstick.width, windstick.height)
+      windstick.ctx.restore()
+    }
   }
 
   // 移动
@@ -404,13 +425,36 @@ class Player extends Aircraft {
     this.list[1].x = x + this.windstickOffset[0]
     this.list[1].y = y + this.windstickOffset[1]
   }
+
+  // 发射子弹
+  shots () {
+
+  }
+}
+/**
+ * 子弹类
+ * @param {Object} img 子弹图片
+ * @param {Number} width 子弹宽度
+ * @param {Number} height 子弹高度
+ */
+class Bullet {
+  constructor (img, width, height) {
+    // 画布
+    this.cas = document.createElement('canvas')
+    // 画布2d上下文
+    this.ctx = this.cas.getContext('2d')
+    this.img = img
+    this.width = width
+    this.height = height
+  }
 }
 
 Object.assign(Game, {
   Striker: Striker,
   Background: Background,
   Aircraft: Aircraft,
-  Player: Player
+  Player: Player,
+  Bullet: Bullet
 })
 
 export default Game
