@@ -8,7 +8,8 @@ const Game = {
   img: {
     bg5: require('@/assets/img/bg5.jpg'),
     plane2: require('@/assets/img/plane2.png'),
-    lxj4: require('@/assets/img/lxj4.png')
+    lxj4: require('@/assets/img/lxj4.png'),
+    pd30: require('@/assets/img/pd30.png')
   }
 }
 
@@ -164,17 +165,17 @@ class Striker {
         client[1] = e.touches[0].clientY
         let x = client[0] - offset[0]
         let y = client[1] - offset[1]
-        if (x <= -p.width / 2) {
-          x = -p.width / 2
+        if (x <= -p.width * 0.5) {
+          x = -p.width * 0.5
         }
-        if (x + p.width / 2 >= striker.width) {
-          x = striker.width - p.width / 2
+        if (x + p.width * 0.5 >= striker.width) {
+          x = striker.width - p.width * 0.5
         }
-        if (y <= -p.height / 2) {
-          y = -p.height / 2
+        if (y <= -p.height * 0.5) {
+          y = -p.height * 0.5
         }
-        if (y + p.height / 2 >= striker.height) {
-          y = striker.height - p.height / 2
+        if (y + p.height * 0.5 >= striker.height) {
+          y = striker.height - p.height * 0.5
         }
         p.move(x, y)
       }
@@ -206,14 +207,29 @@ class Striker {
     // 绘制所有元素
     for (const item in this.element) {
       const el = this.element[item]
+      // 绘制主图层
       this.ctx.drawImage(el.cas, el.x, el.y)
       if (el.list && el.list.length > 0) {
+        // 绘制其他图层
         el.list.forEach(element => {
           this.ctx.drawImage(element.cas, element.x, element.y)
           if (element.update) {
             element.update(el, now)
           }
         })
+        console.log(el.bullet.length)
+        // 射击
+        el.shots(now)
+        // 绘制子弹图层
+        // eslint-disable-next-line semi-spacing
+        for (var i = 0;i < el.bullet.length;i++) {
+          this.ctx.drawImage(el.bullet[i].cas, el.bullet[i].x, el.bullet[i].y)
+          el.bullet[i].move()
+          // 删除超出屏幕的子弹
+          if (el.bullet[i].y < 0) {
+            el.bullet.splice(i--, 1)
+          }
+        }
       }
     }
     this.ctx.restore()
@@ -239,7 +255,7 @@ class Striker {
 
 /**
  * 背景类
- * @param {Object} img 图片
+ * @param {Object} img 资源图片
  * @param {Number} width 背景宽度
  * @param {Number} height 背景高度
  * @param {Number} speed 背景移动速度
@@ -309,6 +325,8 @@ class Aircraft {
     this.height = height
     this.sWidth = sWidth
     this.sHeight = sHeight
+    // 帧更新结束时间
+    this.updateTime = new Date()
     // 生命值
     this.health = 0
     // x坐标
@@ -321,7 +339,7 @@ class Aircraft {
 }
 /**
  * 玩家飞机类
- * @param {Object} img 飞机图片
+ * @param {Object} img 资源图片
  * @param {Number} width 飞机宽度
  * @param {Number} height 飞机高度
  * @param {Number} sWidth 游戏宽度
@@ -335,17 +353,27 @@ class Player extends Aircraft {
     // 是否拖拽
     this.drag = false
     // 螺旋桨偏移
-    this.windstickOffset = [this.width / 2, 0]
+    this.windstickOffset = [this.width * 0.5, 0]
     // 螺旋桨图片剪切位置
     this.windstickCut = [[6, 2], [51, 2], [97, 2]]
     // 螺旋桨剪切索引
     this.windstickIndex = 0
+    // 子弹偏移
+    this.bulletOffset = [
+      [this.width * 0.5, -66],
+      [this.width * 0.25, -58],
+      [this.width * 0.75, -58],
+      [0, -50],
+      [this.width, -50]
+    ]
+    // 子弹列表
+    this.bullet = []
     this.init()
   }
 
   // 初始化
   init () {
-    this.x = this.sWidth / 2 - this.width / 2
+    this.x = this.sWidth * 0.5 - this.width * 0.5
     this.y = this.sHeight - this.height * 2
     this.create()
   }
@@ -355,21 +383,18 @@ class Player extends Aircraft {
     this.createShadow()
     this.createWindstick()
     this.ctx.save()
-    // this.ctx.lineWidth = '1'
-    // this.ctx.strokeStyle = 'red'
-    // this.ctx.rect(0, 0, this.cas.width, this.cas.height)
-    // this.ctx.stroke()
     // 主要图层
     this.ctx.drawImage(this.img.plane2, 264, 0, 66, 50, 0, 0, this.width, this.height)
     this.ctx.restore()
+    this.shots(null)
   }
 
   // 创建阴影
   createShadow () {
     const cas = document.createElement('canvas')
     const ctx = cas.getContext('2d')
-    const width = cas.width = this.width / 2
-    const height = cas.height = this.height / 2
+    const width = cas.width = this.width * 0.5
+    const height = cas.height = this.height * 0.5
     const x = this.x + this.shadowOffset[0]
     const y = this.y + this.shadowOffset[1]
     ctx.save()
@@ -384,7 +409,7 @@ class Player extends Aircraft {
     const cas = document.createElement('canvas')
     const ctx = cas.getContext('2d')
     const width = 22
-    this.windstickOffset[0] = this.windstickOffset[0] - width / 2
+    this.windstickOffset[0] = this.windstickOffset[0] - width * 0.5
     const height = 3.6
     const x = this.x + this.windstickOffset[0]
     const y = this.y + this.windstickOffset[1]
@@ -427,25 +452,56 @@ class Player extends Aircraft {
   }
 
   // 发射子弹
-  shots () {
-
+  shots (now) {
+    if (now === null || now - this.updateTime > 120) {
+      this.updateTime = now
+      this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[0][0], this.y + this.bulletOffset[0][1]))
+      this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[1][0], this.y + this.bulletOffset[1][1]))
+      this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[2][0], this.y + this.bulletOffset[2][1]))
+      this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[3][0], this.y + this.bulletOffset[3][1]))
+      this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[4][0], this.y + this.bulletOffset[4][1]))
+    }
   }
 }
 /**
  * 子弹类
- * @param {Object} img 子弹图片
+ * @param {Object} img 资源图片
  * @param {Number} width 子弹宽度
  * @param {Number} height 子弹高度
+ * @param {Number} x x坐标
+ * @param {Number} y y坐标
  */
 class Bullet {
-  constructor (img, width, height) {
+  constructor (img, width, height, x, y) {
     // 画布
     this.cas = document.createElement('canvas')
     // 画布2d上下文
     this.ctx = this.cas.getContext('2d')
+    // 子弹图片
     this.img = img
+    // 画布宽度
+    this.cas.width = width
+    // 画布高度
+    this.cas.height = height
     this.width = width
     this.height = height
+    this.x = x - width * 0.5
+    this.y = y
+    this.create()
+  }
+
+  // 创建
+  create () {
+    this.ctx.save()
+    this.ctx.translate(this.cas.width, this.cas.height)
+    this.ctx.rotate(180 * Math.PI / 180)
+    this.ctx.drawImage(this.img.pd30, 0, 0, this.cas.width, this.cas.height)
+    this.ctx.restore()
+  }
+
+  // 移动
+  move () {
+    this.y -= 12
   }
 }
 
