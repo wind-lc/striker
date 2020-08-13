@@ -453,7 +453,7 @@ class Player extends Aircraft {
 
   // 发射子弹
   shots (now) {
-    if (now === null || now - this.updateTime > 120) {
+    if (now === null || now - this.updateTime > 116) {
       this.updateTime = now
       this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[0][0], this.y + this.bulletOffset[0][1]))
       this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[1][0], this.y + this.bulletOffset[1][1]))
