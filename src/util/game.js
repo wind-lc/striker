@@ -217,7 +217,7 @@ class Striker {
             element.update(el, now)
           }
         })
-        console.log(el.bullet.length)
+        // console.log(el.bullet.length)
         // 射击
         el.shots(now)
         // 绘制子弹图层
@@ -501,7 +501,7 @@ class Bullet {
 
   // 移动
   move () {
-    this.y -= 12
+    this.y -= 18
   }
 }
 
