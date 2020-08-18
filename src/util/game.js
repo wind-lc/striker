@@ -9,7 +9,10 @@ const Game = {
     bg5: require('@/assets/img/bg5.jpg'),
     plane2: require('@/assets/img/plane2.png'),
     lxj4: require('@/assets/img/lxj4.png'),
-    pd30: require('@/assets/img/pd30.png')
+    pd30: require('@/assets/img/pd30.png'),
+    pd31: require('@/assets/img/pd31.png'),
+    s2: require('@/assets/img/s2.png'),
+    power: require('@/assets/img/power.png')
   }
 }
 
@@ -88,10 +91,15 @@ class Striker {
     return new Promise(resolve => {
       const getImg = url => {
         return new Promise((resolve, reject) => {
+          const cas = document.createElement('canvas')
+          const ctx = cas.getContext('2d')
           const img = new Image()
           img.src = url
           img.onload = () => {
-            resolve(img)
+            cas.width = img.width
+            cas.height = img.height
+            ctx.drawImage(img, 0, 0)
+            resolve(cas)
           }
           img.error = error => {
             reject(error)
@@ -208,26 +216,36 @@ class Striker {
     for (const item in this.element) {
       const el = this.element[item]
       // 绘制主图层
-      this.ctx.drawImage(el.cas, el.x, el.y)
-      if (el.list && el.list.length > 0) {
-        // 绘制其他图层
-        el.list.forEach(element => {
-          this.ctx.drawImage(element.cas, element.x, element.y)
-          if (element.update) {
-            element.update(el, now)
-          }
+      if (el instanceof Array) {
+        el.forEach(item => {
+          this.ctx.drawImage(item.cas, item.x, item.y)
+          item.update(now)
+          item.move(now)
         })
-        // console.log(el.bullet.length)
-        // 射击
-        el.shots(now)
-        // 绘制子弹图层
-        // eslint-disable-next-line semi-spacing
-        for (var i = 0;i < el.bullet.length;i++) {
-          this.ctx.drawImage(el.bullet[i].cas, el.bullet[i].x, el.bullet[i].y)
-          el.bullet[i].move()
-          // 删除超出屏幕的子弹
-          if (el.bullet[i].y < 0) {
-            el.bullet.splice(i--, 1)
+      } else {
+        this.ctx.drawImage(el.cas, el.x, el.y)
+        if (item === 'palyer') {
+          el.collision()
+        }
+        if (el.list && el.list.length > 0) {
+          // 绘制其他图层
+          el.list.forEach(element => {
+            this.ctx.drawImage(element.cas, element.x, element.y)
+            if (element.update) {
+              element.update(el, now)
+            }
+          })
+          // console.log(el.bullet.length)
+          // 射击
+          el.shots(now)
+          // 绘制子弹图层
+          for (var i = 0; i < el.bullet.length; i++) {
+            this.ctx.drawImage(el.bullet[i].cas, el.bullet[i].x, el.bullet[i].y)
+            el.bullet[i].move()
+            // 删除超出屏幕的子弹
+            if (el.bullet[i].y < 0) {
+              el.bullet.splice(i--, 1)
+            }
           }
         }
       }
@@ -246,9 +264,12 @@ class Striker {
     // 背景添加进元素
     this.element.bg = bg
     // 实例化玩家
-    const palyer = new Game.Player(this.img, 66, 50, this.width, this.height)
+    const palyer = new Game.Player(this.img, 66, 50, this.width, this.height, this.element)
     this.element.palyer = palyer
     this.eventListening(this)
+    // 实例化道具
+    const power = new Game.Prop(this.img.s2, 25, 25, 100, 100, this.width, this.height, 'p')
+    this.element.prop = [power]
     this.run()
   }
 }
@@ -344,9 +365,10 @@ class Aircraft {
  * @param {Number} height 飞机高度
  * @param {Number} sWidth 游戏宽度
  * @param {Number} sHeight 游戏高度
+ * @param {Object} element 游戏元素
  */
 class Player extends Aircraft {
-  constructor (img, width, height, sWidth, sHeight) {
+  constructor (img, width, height, sWidth, sHeight, element) {
     super(img, width, height, sWidth, sHeight)
     // 其他图层
     this.list = []
@@ -368,6 +390,70 @@ class Player extends Aircraft {
     ]
     // 子弹列表
     this.bullet = []
+    // 子弹等级
+    this.bulletLevel = 0
+    // 子弹等级对应列表
+    this.bulletLevelList = [
+      [
+        {
+          param: [this.img.pd30, this.bulletOffset[0][0], this.bulletOffset[0][1]]
+        }
+      ],
+      [
+        {
+          param: [this.img.pd30, this.bulletOffset[1][0], this.bulletOffset[1][1]]
+        },
+        {
+          param: [this.img.pd30, this.bulletOffset[2][0], this.bulletOffset[2][1]]
+        }
+      ],
+      [
+        {
+          param: [this.img.pd30, this.bulletOffset[0][0], this.bulletOffset[0][1]]
+        },
+        {
+          param: [this.img.pd30, this.bulletOffset[1][0], this.bulletOffset[1][1]]
+        },
+        {
+          param: [this.img.pd30, this.bulletOffset[2][0], this.bulletOffset[2][1]]
+        }
+      ],
+      [
+        {
+          param: [this.img.pd30, this.bulletOffset[0][0], this.bulletOffset[0][1]]
+        },
+        {
+          param: [this.img.pd30, this.bulletOffset[1][0], this.bulletOffset[1][1]]
+        },
+        {
+          param: [this.img.pd30, this.bulletOffset[2][0], this.bulletOffset[2][1]]
+        },
+        {
+          param: [this.img.pd30, this.bulletOffset[3][0], this.bulletOffset[3][1]]
+        }
+      ],
+      [
+        {
+          param: [this.img.pd30, this.bulletOffset[0][0], this.bulletOffset[0][1]]
+        },
+        {
+          param: [this.img.pd30, this.bulletOffset[1][0], this.bulletOffset[1][1]]
+        },
+        {
+          param: [this.img.pd30, this.bulletOffset[2][0], this.bulletOffset[2][1]]
+        },
+        {
+          param: [this.img.pd30, this.bulletOffset[3][0], this.bulletOffset[3][1]]
+        },
+        {
+          param: [this.img.pd30, this.bulletOffset[4][0], this.bulletOffset[4][1]]
+        }
+      ]
+    ]
+    // 元素
+    this.element = element
+    // 道具获得偏移
+    this.acquireOffset = [this.width, -16]
     this.init()
   }
 
@@ -451,18 +537,81 @@ class Player extends Aircraft {
     this.list[1].y = y + this.windstickOffset[1]
   }
 
+  // 碰撞检测
+  collision () {
+    // l1
+    const x1 = this.x + 28
+    // r1
+    const x2 = this.x + 38
+    // t1
+    const y1 = this.y
+    // b1
+    const y2 = this.y + this.height
+    const prop = this.element.prop
+    for (var i = 0; i < prop.length; i++) {
+      // l2
+      const x3 = prop[i].x
+      // r2
+      const x4 = prop[i].x + prop[i].width
+      // t2
+      const y3 = prop[i].y
+      // b2
+      const y4 = prop[i].y + prop[i].height
+      if (!(y2 < y3 || x1 > x4 || y1 > y4 || x2 < x3)) {
+        let timer = null
+        switch (prop[i].type) {
+          case 'p':
+            this.bulletLevel = this.bulletLevel + 1 <= 3 ? this.bulletLevel + 1 : this.bulletLevel
+            prop.splice(i--, 1)
+            this.powerUpdate()
+            timer = setTimeout(() => {
+              this.powerUpdateRemove()
+              clearTimeout(timer)
+            }, 1000)
+        }
+      }
+    }
+  }
+
+  // 子弹增强
+  powerUpdate () {
+    const cas = document.createElement('canvas')
+    const ctx = cas.getContext('2d')
+    const width = cas.width = 42
+    const height = cas.height = 12
+    const x = this.x + this.acquireOffset[0]
+    const y = this.y + this.acquireOffset[1]
+    ctx.save()
+    ctx.drawImage(this.img.power, 0, 0, width, height)
+    this.ctx.lineWidth = '1'
+    this.ctx.strokeStyle = 'red'
+    this.ctx.rect(x, y, width, height)
+    this.ctx.stroke()
+    ctx.restore()
+    this.list[2] = { cas, ctx, width, height, x, y }
+  }
+
+  // 移除子增强
+  powerUpdateRemove () {
+    this.list.splice(2, 1)
+  }
+
   // 发射子弹
   shots (now) {
     if (now === null || now - this.updateTime > 116) {
       this.updateTime = now
-      this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[0][0], this.y + this.bulletOffset[0][1]))
-      this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[1][0], this.y + this.bulletOffset[1][1]))
-      this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[2][0], this.y + this.bulletOffset[2][1]))
-      this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[3][0], this.y + this.bulletOffset[3][1]))
-      this.bullet.push(new Game.Bullet(this.img, 22, 66, this.x + this.bulletOffset[4][0], this.y + this.bulletOffset[4][1]))
+      this.bulletLevelList[this.bulletLevel].forEach(el => {
+        this.bullet.push(new Game.Bullet(el.param[0], 22, 66, this.x + el.param[1], this.y + el.param[2]))
+        // this.bullet.push(new Game.Bullet(el.param[0], el.param[1], el.param[2], el.param[3], el.param[4]))
+      })
+      // this.bullet.push(new Game.Bullet(this.img.pd30, 22, 66, this.x + this.bulletOffset[0][0], this.y + this.bulletOffset[0][1]))
+      // this.bullet.push(new Game.Bullet(this.img.pd30, 22, 66, this.x + this.bulletOffset[2][0], this.y + this.bulletOffset[2][1]))
+      // this.bullet.push(new Game.Bullet(this.img.pd30, 22, 66, this.x + this.bulletOffset[3][0], this.y + this.bulletOffset[3][1]))
+      // this.bullet.push(new Game.Bullet(this.img.pd30, 22, 66, this.x + this.bulletOffset[4][0], this.y + this.bulletOffset[4][1]))
     }
   }
 }
+
 /**
  * 子弹类
  * @param {Object} img 资源图片
@@ -477,7 +626,6 @@ class Bullet {
     this.cas = document.createElement('canvas')
     // 画布2d上下文
     this.ctx = this.cas.getContext('2d')
-    // 子弹图片
     this.img = img
     // 画布宽度
     this.cas.width = width
@@ -493,9 +641,7 @@ class Bullet {
   // 创建
   create () {
     this.ctx.save()
-    this.ctx.translate(this.cas.width, this.cas.height)
-    this.ctx.rotate(180 * Math.PI / 180)
-    this.ctx.drawImage(this.img.pd30, 0, 0, this.cas.width, this.cas.height)
+    this.ctx.drawImage(this.img, 0, 0, this.width, this.height)
     this.ctx.restore()
   }
 
@@ -505,12 +651,114 @@ class Bullet {
   }
 }
 
+/**
+ * 道具类
+ * @param {Object} img 资源图片
+ * @param {Number} width 道具宽度
+ * @param {Number} height 道具高度
+ * @param {Number} x x坐标
+ * @param {Number} y y坐标
+ * @param {Number} sWidth 游戏宽度
+ * @param {Number} sHeight 游戏高度
+ * @param {String} type 道具类型
+ */
+class Prop {
+  constructor (img, width, height, x, y, sWidth, sHeight) {
+    // 画布
+    this.cas = document.createElement('canvas')
+    // 画布2d上下文
+    this.ctx = this.cas.getContext('2d')
+    this.img = img
+    // 画布宽度
+    this.cas.width = width
+    // 画布高度
+    this.cas.height = height
+    this.width = width
+    this.height = height
+    this.x = x
+    this.y = y
+    // 道具图片剪切位置
+    this.propCut = [[0, 0], [30, 0], [60, 0], [60, 0], [90, 0], [120, 0], [150, 0]]
+    // 道具剪切索引
+    this.propIndex = 0
+    this.sWidth = sWidth
+    this.sHeight = sHeight
+    // 更新结束时间
+    this.updateTime = new Date()
+    // 移动结束时间
+    this.moveTime = new Date()
+    // 移动状态
+    this.moveStatus = []
+    this.type = 'p'
+    this.create()
+  }
+
+  // 创建
+  create () {
+    this.moveStatus = [Boolean(Math.round(Math.random())), Boolean(Math.round(Math.random()))]
+    this.ctx.save()
+    // this.ctx.lineWidth = '1'
+    // this.ctx.strokeStyle = 'red'
+    // this.ctx.rect(0, 0, this.width, this.height)
+    // this.ctx.stroke()
+    this.ctx.drawImage(this.img, 0, 0, 30, 30, 0, 0, this.width, this.height)
+    this.ctx.restore()
+  }
+
+  // 道具动画
+  update (now) {
+    if (now - this.updateTime > 48) {
+      this.updateTime = now
+      this.propIndex++
+      if (this.propIndex >= this.propCut.length) {
+        this.propIndex = 0
+      }
+      this.ctx.clearRect(0, 0, this.width, this.height)
+      this.ctx.save()
+      this.ctx.drawImage(this.img, this.propCut[this.propIndex][0], this.propCut[this.propIndex][1], 30, 30, 0, 0, this.width, this.height)
+      this.ctx.restore()
+    }
+  }
+
+  // 移动
+  move (now) {
+    if (now - this.moveTime > 66) {
+      this.moveTime = now
+      const x = parseInt(Math.random() * (10 - 1 * 2) + 1)
+      const y = parseInt(Math.random() * (10 - 1 * 2) + 1)
+      if (this.x < 0) {
+        this.moveStatus[0] = true
+      }
+      if (this.x > this.sWidth - this.width) {
+        this.moveStatus[0] = false
+      }
+      if (this.y < 0) {
+        this.moveStatus[1] = true
+      }
+      if (this.y > this.sHeight - this.width) {
+        this.moveStatus[1] = false
+      }
+      if (this.moveStatus[0]) {
+        this.x += x
+      } else {
+        this.x -= x
+      }
+      if (this.moveStatus[1]) {
+        this.y += y
+      } else {
+        this.y -= y
+      }
+    }
+  }
+}
+
 Object.assign(Game, {
   Striker: Striker,
   Background: Background,
   Aircraft: Aircraft,
   Player: Player,
-  Bullet: Bullet
+  Bullet: Bullet,
+  Prop: Prop
 })
 
 export default Game
